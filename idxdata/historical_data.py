@@ -106,7 +106,6 @@ def get_hist_data():
     df = df.drop(df.columns[0], axis=1)
     df.index = [x.date() for x in df.index]
 
-
     return df
 
 
@@ -117,5 +116,5 @@ if __name__ =="__main__":
     df = get_hist_data_from_sql(start, end, underlying, type="o")
     df2 = get_hist_data()
 
-    print(df)
+    print(df2)
 

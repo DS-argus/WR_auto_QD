@@ -20,8 +20,8 @@ def main():
 
     df = df[columns]
 
+    # 적립형 안넣으니까 일단 다 없애버리는 형태로
     df = df.drop_duplicates(['펀드명'], keep=False)
-
     df = df.sort_values(by=['펀드명'])
 
     file_status = xw.Book.caller()
@@ -33,5 +33,5 @@ def main():
 
 
 if __name__ == "__main__":
-    xw.Book(r"\\172.31.1.222\Deriva\박성민(팀폴더)\주간회의 펀드현황\status.xlsx").set_mock_caller()
+    xw.Book(r"\\172.31.1.222\Deriva\박성민(팀폴더)\본부업무\1. 일간_일간 데일리 현황\ELS 펀드현황\status_excel.xlsx").set_mock_caller()
     main()

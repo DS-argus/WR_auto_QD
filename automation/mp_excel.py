@@ -57,7 +57,7 @@ def main():
                 df_fundlist['편입일'] = df1.iloc[i, 2]
                 df_fundlist['쿠폰'] = df1.iloc[i, 15]
                 df_fundlist_all = pd.concat([df_fundlist_all, df_fundlist])
-                break
+                # break
 
     # 해당 기간에 펀드 없을경우 '정보 없음' 출력하고 종료
     if df_fundlist_all.empty:
@@ -73,6 +73,12 @@ def main():
 
     # DB에서 불러올 때 KB 생명 제외(이관하면 변경)
     df_fundlist_all = df_fundlist_all[~(df_fundlist_all['펀드코드'].str.contains("KL"))]
+
+    if df_fundlist_all.empty:
+        data = ["", '해당 펀드 없음', "", "", ""]
+        df_fundlist_all.loc[0] = data
+        file_schedule.sheets['펀드정보_xlwings'][0, 0].options(index=False).value = df_fundlist_all
+        return
 
     file_schedule.sheets['펀드정보_xlwings'][0, 0].options(index=False).value = df_fundlist_all
 
