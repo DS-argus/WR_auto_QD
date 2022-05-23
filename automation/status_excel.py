@@ -20,9 +20,7 @@ def main():
 
     df = df[columns]
 
-    # 적립형 안넣으니까 일단 다 없애버리는 형태로
-    df = df.drop_duplicates(['펀드명'], keep=False)
-    df = df.sort_values(by=['펀드명'])
+    df = df.sort_values(by=['펀드명', '편입일'])
 
     file_status = xw.Book.caller()
     sh = file_status.sheets['펀드정보_xlwings']
