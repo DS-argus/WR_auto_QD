@@ -8,15 +8,12 @@ warnings.filterwarnings('ignore')
 
 
 def main():
-
     # DB에서 편입정보 sheet, database sheet을 df1, df2에 저장
-    app = xw.App()
-    app.visible = False
-    db = xw.Book(r"\\172.31.1.222\Deriva\자동화\DB\변액 DATABASE.xlsm")
-    df1 = db.sheets("편입정보").range("A1").options(pd.DataFrame, index=False, expand='table', header=False).value
-    df2 = db.sheets("database").range("A1").options(pd.DataFrame, index=False, expand='table', header=False).value
-    db.close()
-    app.quit()
+    with xw.App(visible=False) as app:
+        db = xw.Book(r'\\172.31.1.222\Deriva\자동화\DB\변액 DATABASE.xlsm')
+        df1 = db.sheets("편입정보").range("A1").options(pd.DataFrame, index=False, expand='table', header=False).value
+        df2 = db.sheets("database").range("A1").options(pd.DataFrame, index=False, expand='table', header=False).value
+        db.close()
 
     # ID를 index로
     df1 = df1.set_index(df1[0])
@@ -57,7 +54,6 @@ def main():
                 df_fundlist['편입일'] = df1.iloc[i, 2]
                 df_fundlist['쿠폰'] = df1.iloc[i, 15]
                 df_fundlist_all = pd.concat([df_fundlist_all, df_fundlist])
-                # break
 
     # 해당 기간에 펀드 없을경우 '정보 없음' 출력하고 종료
     if df_fundlist_all.empty:
@@ -73,9 +69,7 @@ def main():
 
     file_schedule.sheets['펀드정보_xlwings'][0, 0].options(index=False).value = df_fundlist_all
 
-    # ------------------------------------------------------------------------------------------------------------#
-
-    # 이제 펀드코드하고 편입일 일치하는 ELS종목 액면_FAS에서 모두 찾아서 월지급리스트 시트에 출력
+    # 펀드코드하고 편입일 일치하는 ELS종목 액면_FAS에서 모두 찾아서 월지급리스트 시트에 출력
     df_info = df_fundlist_all
 
     df_notional = file_schedule.sheets['액면_FAS'].range("A1").options(pd.DataFrame,
@@ -83,7 +77,7 @@ def main():
                                                                      expand='table',
                                                                      header=True).value
 
-    del df_notional['조회일자']
+    df_notional.drop(['조회일자'], axis=1, inplace=True)
 
     df_result = pd.DataFrame(columns=['펀드코드', '펀드명', '종목코드', '종목명', '주수/계약수/액면', '발행일', '회차', '쿠폰'])
 
@@ -94,15 +88,16 @@ def main():
         coupon = df_info.iloc[i, 4]
 
         match_els = df_notional[(df_notional['펀드코드'] == code) & (df_notional['발행일'] == issue_date)]
-        match_els.loc[:, '쿠폰'] = coupon
-        match_els.loc[:, '회차'] = num[:-1]
+
+        match_els['쿠폰'] = coupon
+        match_els['회차'] = num[:-1]
+
         df_result = pd.concat([df_result, match_els])
 
     df_result.rename(columns={'주수/계약수/액면': '계약금액'}, inplace=True)
     df_result['MP베리어금액'] = df_result['계약금액'] * df_result['쿠폰'] / 12
     df_result['평가구분'] = "MP"
-    del df_result['쿠폰']
-    del df_result['발행일']
+    df_result.drop(['쿠폰', '발행일'], axis=1, inplace=True)
 
     df_result = df_result[['펀드코드', '펀드명', '종목코드', '종목명', '평가구분', '회차', '계약금액', 'MP베리어금액']]
 
@@ -134,8 +129,6 @@ def main():
 
     # 정렬
     df_result.sort_values(by=['종목명', '평가구분', '펀드명'], inplace=True)
-
-    # 표 있는 곳까지만 테두리 그리고 & 표 설정 name== '월지급표', 줄무늬행, 스타일, 필터 없이......
 
     file_schedule.sheets['월지급리스트'].range("A2:H1000").clear_contents()
 

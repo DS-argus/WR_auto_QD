@@ -89,10 +89,12 @@ def main():
     df_fundlist_all["ID"] = df_fundlist_all.index
     df_fundlist_all = df_fundlist_all.sort_index().sort_values(by=['일자', '발행사1', '펀드명'])
     df_fundlist_all.set_index(df_fundlist_all["일자"], inplace=True)
-    del df_fundlist_all['일자']
+    df_fundlist_all.drop(['일자'], axis=1, inplace=True)
+
     df_fundlist_all = df_fundlist_all[['ID', '펀드코드', '펀드명', '차수',
                                        '편입일', '발행사1', '발행사2', '발행사3', '발행사4',
                                        '쿠폰', 'Size', 'Worst', 'Level of Worst', '구조']]
+
     df_fundlist_all = df_fundlist_all.replace("None 0", "")
 
     file_schedule.sheets['Schedule'][5, 0].options(index=True).value = df_fundlist_all

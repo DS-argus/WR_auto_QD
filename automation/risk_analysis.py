@@ -1,10 +1,12 @@
-from idxdata.historical_data import get_hist_data
+from idxdata.historical_data import get_hist_data_from_sql
+
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from dateutil.relativedelta import relativedelta
 import xlwings as xw
+import matplotlib.pyplot as plt
 
+from dateutil.relativedelta import relativedelta
+from datetime import date
 
 def price_plot(df):
 
@@ -13,20 +15,17 @@ def price_plot(df):
     f.set_size_inches((10, 16))
     plt.subplots_adjust(hspace=0.8)
 
-    # CSI300은 2000초에 없어서 결측치 제거
-    df["CSI300"] = df["CSI300"].drop(df[df["CSI300"] == "#N/A N/A"].index)
-
     # 그래프 x축 범위 설정용
     start_date = df.index[0] - relativedelta(years=1)
     end_date = df.index[-1] + relativedelta(years=1)
 
     # 그래프 그리기
-    axes[0].plot(df["KOSPI200"][:-2])
-    axes[1].plot(df["HSCEI"][:-2])
-    axes[2].plot(df["NIKKEI225"][:-2])
-    axes[3].plot(df["S&P500"][:-2])
-    axes[4].plot(df["EUROSTOXX50"][:-2])
-    axes[5].plot(df["CSI300"][:-2])
+    axes[0].plot(df["KOSPI200"])
+    axes[1].plot(df["HSCEI"])
+    axes[2].plot(df["NIKKEI225"])
+    axes[3].plot(df["S&P500"])
+    axes[4].plot(df["EUROSTOXX50"])
+    axes[5].plot(df["CSI300"])
 
     # 축범위 설정
     axes[0].set_xlim([start_date, end_date])
@@ -51,12 +50,12 @@ def price_plot(df):
     axes[5].spines['top'].set_visible(False)
 
     # 마지막 종가 출력
-    axes[0].text(0.9, 1.1, f'    {df.index[-2]}: {df["KOSPI200"][-2]}', fontsize=8, transform=axes[0].transAxes)
-    axes[1].text(0.9, 1.1, f'    {df.index[-2]}: {df["HSCEI"][-2]}', fontsize=8, transform=axes[1].transAxes)
-    axes[2].text(0.9, 1.1, f'    {df.index[-2]}: {df["NIKKEI225"][-2]}', fontsize=8, transform=axes[2].transAxes)
-    axes[3].text(0.9, 1.1, f'    {df.index[-2]}: {df["S&P500"][-2]}', fontsize=8, transform=axes[3].transAxes)
-    axes[4].text(0.9, 1.1, f'    {df.index[-2]}: {df["EUROSTOXX50"][-2]}', fontsize=8, transform=axes[4].transAxes)
-    axes[5].text(0.9, 1.1, f'    {df.index[-2]}: {df["CSI300"][-2]}', fontsize=8, transform=axes[5].transAxes)
+    axes[0].text(0.9, 1.1, f'    {df.index[-1]}: {df["KOSPI200"][-1]}', fontsize=8, transform=axes[0].transAxes)
+    axes[1].text(0.9, 1.1, f'    {df.index[-1]}: {df["HSCEI"][-1]}', fontsize=8, transform=axes[1].transAxes)
+    axes[2].text(0.9, 1.1, f'    {df.index[-1]}: {df["NIKKEI225"][-1]}', fontsize=8, transform=axes[2].transAxes)
+    axes[3].text(0.9, 1.1, f'    {df.index[-1]}: {df["S&P500"][-1]}', fontsize=8, transform=axes[3].transAxes)
+    axes[4].text(0.9, 1.1, f'    {df.index[-1]}: {df["EUROSTOXX50"][-1]}', fontsize=8, transform=axes[4].transAxes)
+    axes[5].text(0.9, 1.1, f'    {df.index[-1]}: {df["CSI300"][-1]}', fontsize=8, transform=axes[5].transAxes)
 
     # 범례 출력
     axes[0].legend(labels=["KOSPI200"], markerfirst=False, fontsize='x-small', loc=9, bbox_to_anchor=(0.1, 1.3))
@@ -69,84 +68,55 @@ def price_plot(df):
     return f
 
 
-def cagr(df, index_name):
+def cagr(df_data, index_name):
 
     df_result = pd.DataFrame(index=index_name, columns=["CAGR"])
 
     for i in index_name:
+        df = df_data[i].dropna()
 
-        if i != 'CSI300':
-
-            cagr_val = (df[i][-1] / df[i][0]) ** (365/(df.index[-1] - df.index[0]).days)
-            # print(f'CAGR of {i}   {(cagr_val - 1) * 100:.2f}%')
-            df_result.loc[i] = f'{(cagr_val - 1) * 100:.2f}%'
-        else:
-
-            cagr_val = (df[i][-1] / df[i][734]) ** (365 / (df.index[-1] - df.index[734]).days)
-            # print(f'CAGR of {i}   {(cagr_val - 1) * 100:.2f}%')
-            df_result.loc[i] = f'{(cagr_val - 1) * 100:.2f}%'
+        cagr_val = (df[-1] / df[0]) ** (365/(df.index[-1] - df.index[0]).days)
+        df_result.loc[i] = f'{(cagr_val - 1) * 100:.2f}%'
 
     return df_result
 
 
-def vol(df, index_name):
+def vol(df_data, index_name):
 
     df_result = pd.DataFrame(index=index_name, columns=["Vol"])
 
     for i in index_name:
+        df = df_data[i].dropna()
 
-        if i != "CSI300":
-
-            ar = np.array(df[i]).astype(float)
-            ar_return = np.log(ar[1:] / ar[:-1])
-            # print(f'Vol of {i}   {np.std(ar_return) * np.sqrt(252) * 100:.2f}%')
-            df_result.loc[i] = f'{np.std(ar_return) * np.sqrt(252) * 100:.2f}%'
-        else:
-            ar = np.array(df[i][734:]).astype(float)
-            ar_return = np.log(ar[1:] / ar[:-1])
-            # print(f'Vol of {i}   {np.std(ar_return) * np.sqrt(252) * 100:.2f}%')
-            df_result.loc[i] = f'{np.std(ar_return) * np.sqrt(252) * 100:.2f}%'
+        ar = np.array(df).astype(float)
+        ar_return = np.log(ar[1:] / ar[:-1])
+        df_result.loc[i] = f'{np.std(ar_return) * np.sqrt(252) * 100:.2f}%'
 
     return df_result
 
 
-def mdd(df, index_name):
+def mdd(df_data, index_name):
 
     df_result = pd.DataFrame(index=index_name, columns=["MDD", "MDD_Date"])
 
     for i in index_name:
-
-        if i != "CSI300":
-
-            sr = df[i]
-            mdd_list = [min(sr[i:]) / sr[i] for i in range(len(sr))]
-            min_mdd = min(mdd_list)
-            mdd_index = mdd_list.index(min_mdd)
-            min_value = min(sr[mdd_index:])
-            min_date = sr.index[sr == min_value]
-            min_date = min_date[0].strftime("%Y-%m-%d")
-            # print(f'MDD of {i}    {(min(mdd_list) - 1) * 100:.2f}% on {min_date}')
-            df_result.loc[i] = [f'{(min(mdd_list) - 1) * 100:.2f}%', f'{min_date}']
-        else:
-            sr = df[i][734:]
-            mdd_list = [min(sr[i:]) / sr[i] for i in range(len(sr))]
-            min_mdd = min(mdd_list)
-            mdd_index = mdd_list.index(min_mdd)
-            min_value = min(sr[mdd_index:])
-            min_date = sr.index[sr == min_value]
-            min_date = min_date[0].strftime("%Y-%m-%d")
-            # print(f'MDD of {i}    {(min(mdd_list) - 1) * 100:.2f}% on {min_date}')
-            df_result.loc[i] = [f'{(min(mdd_list) - 1) * 100:.2f}%', f'{min_date}']
+        sr = df_data[i].dropna()
+        mdd_list = [min(sr[i:]) / sr[i] for i in range(len(sr))]
+        min_mdd = min(mdd_list)
+        mdd_index = mdd_list.index(min_mdd)
+        min_value = min(sr[mdd_index:])
+        min_date = sr.index[sr == min_value]
+        min_date = min_date[0].strftime("%Y-%m-%d")
+        df_result.loc[i] = [f'{(min(mdd_list) - 1) * 100:.2f}%', f'{min_date}']
 
     return df_result
 
 
 if __name__ == "__main__":
 
-    df_price = get_hist_data()
     index = ['KOSPI200', 'HSCEI', 'NIKKEI225', 'S&P500', 'EUROSTOXX50', 'CSI300']
 
-    new_excel = xw.Book()
+    df_price = get_hist_data_from_sql(date(2000, 1, 1), date.today(), index, type='w')
 
     df_CAGR = cagr(df_price, index)
     df_Vol = vol(df_price, index)
@@ -156,5 +126,6 @@ if __name__ == "__main__":
 
     fig = price_plot(df_price)
 
+    new_excel = xw.Book()
     new_excel.sheets["Sheet1"].range("A5").value = df_total
     new_excel.sheets["Sheet1"].pictures.add(fig, name='Historical', update=True)

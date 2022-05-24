@@ -113,8 +113,7 @@ if __name__ =="__main__":
     start = date(2000, 1, 1)
     end = date.today()
     underlying = ['KOSPI200', "EUROSTOXX50", "CSI300"]
-    df = get_hist_data_from_sql(start, end, underlying, type="o")
+    df = get_hist_data_from_sql(start, end, underlying, type="w")
     df2 = get_hist_data()
 
-    print(df2)
-
+    xw.view(df)
