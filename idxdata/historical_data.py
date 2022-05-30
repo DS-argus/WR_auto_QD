@@ -89,31 +89,10 @@ def get_hist_data_from_sql(from_: date,
             return d_weekend.iloc[10:, :]
 
 
-def get_hist_data():
-
-    app = xw.App(visible=False)
-    db = xw.Book(r"\\172.31.1.222\GlobalD\Derivatives\rawdata.xlsm")
-    df = db.sheets("rawdata").range("A8").options(pd.DataFrame, index=False, expand='table', header=False).value
-    db.close()
-    app.kill()
-
-    # 열이름 변경 및 Index를 date로 변경
-    columns = ['Date', 'KOSPI200', 'HSCEI', 'HSI', 'NIKKEI225', 'S&P500', 'EUROSTOXX50', 'CSI300',
-               'S&P500(Q)', 'EUROSTOXX50(Q)',
-               'S&P500(KRW)','EUROSTOXX50(KRW)', 'HSCEI(KRW)']
-    df.columns = columns
-    df = df.set_index(df['Date'])
-    df = df.drop(df.columns[0], axis=1)
-    df.index = [x.date() for x in df.index]
-
-    return df
-
-
-if __name__ =="__main__":
+if __name__ == "__main__":
     start = date(2000, 1, 1)
     end = date.today()
     underlying = ['KOSPI200', "EUROSTOXX50", "CSI300"]
     df = get_hist_data_from_sql(start, end, underlying, type="w")
-    df2 = get_hist_data()
 
     xw.view(df)
