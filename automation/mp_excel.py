@@ -63,6 +63,7 @@ def main():
         return
 
     # 펀드가 있을 경우 펀드명으로 정렬해서 ID부분제외하고 엑셀에 출력
+    df_fundlist_all.drop_duplicates(keep='first', inplace=True)
     df_fundlist_all["ID"] = df_fundlist_all.index
     df_fundlist_all = df_fundlist_all.sort_values(by=['펀드명'])
     df_fundlist_all = df_fundlist_all[['펀드코드', '펀드명', '차수', '편입일', '쿠폰']]

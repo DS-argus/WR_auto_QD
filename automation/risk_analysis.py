@@ -1,4 +1,4 @@
-from idxdata.historical_data import get_hist_data_from_sql
+from idxdata.historical_data import get_price_from_sql
 
 import numpy as np
 import pandas as pd
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
     index = ['KOSPI200', 'HSCEI', 'NIKKEI225', 'S&P500', 'EUROSTOXX50', 'CSI300']
 
-    df_price = get_hist_data_from_sql(date(2000, 1, 1), date.today(), index, type='w')
+    df_price = get_price_from_sql(date(2000, 1, 1), date.today(), index, type='w')
 
     df_CAGR = cagr(df_price, index)
     df_Vol = vol(df_price, index)

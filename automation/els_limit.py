@@ -3,7 +3,6 @@ import pandas as pd
 
 
 # 분기마다 파생결합증권 한도 업데이트 할 때 현재 우리회사가 갖고 있는 파생결합증권 액면 알아야함
-# DLS는 멀티에셋팀, 나머지 ELS는 우리팀
 
 def main():
     with xw.App(visible=False) as app:
@@ -30,31 +29,18 @@ def main():
     df4 = df[['발행사4', '액면금액4', '통화']]
     df4 = df4.rename(columns={'발행사4': '발행사', '액면금액4': '액면금액'})
 
-    df_total = pd.concat([df1, df2, df3, df4], ignore_index=True)
+    df = pd.concat([df1, df2, df3, df4], ignore_index=True)
 
-    df_total_KRW = df_total[df_total.iloc[:, 2] != "달러"]
-    KRW_list = list(filter(None, list(set(df_total_KRW.iloc[:, 0]))))
-    df_sum_KRW = pd.DataFrame(columns=['원화합계'])
+    df_krw = df[['발행사', '액면금액']][df['통화'] != '달러']
+    df_usd = df[['발행사', '액면금액']][df['통화'] == '달러']
 
-    for company in KRW_list:
-        df_sum_KRW.loc[company] = df_total_KRW.iloc[:, 1][df_total_KRW['발행사'] == company].sum()
+    krw_sum = df_krw.groupby('발행사')['액면금액'].sum()
 
+    usd_sum = df_usd.groupby('발행사')['액면금액'].sum()
 
-    df_total_USD = df_total[df_total.iloc[:, 2] == "달러"]
-    USD_list = list(filter(None, list(set(df_total_USD.iloc[:, 0]))))
-    df_sum_USD = pd.DataFrame(columns=['달러합계'])
-
-    for company in USD_list:
-        df_sum_USD.loc[company] = df_total_USD.iloc[:, 1][df_total_USD['발행사'] == company].sum()
-
-    result_excel = xw.Book()
-
-    result_excel.sheets[0].range("A1").value = df_total
-    result_excel.sheets[0].range("F1").value = df_sum_KRW
-    result_excel.sheets[0].range("K1").value = df_sum_USD
-
-    return
+    return krw_sum, usd_sum
 
 
 if __name__ == "__main__":
-    main()
+    xw.view(main()[0])
+    xw.view(main()[1])
