@@ -34,14 +34,14 @@ def main():
 
     # 펀드정보_xlwings 시트 기존 내용 삭제
     file_schedule = xw.Book.caller()
-    file_schedule.sheets['펀드정보_xlwings'].range("A2:E1000").clear_contents()
+    file_schedule.sheets['펀드정보_xlwings'].range("A2:F1000").clear_contents()
 
     # 월지급리스트 시트에 있는 평가일 받아오기
     search_date = file_schedule.sheets['월지급리스트'].range("A1").value
     search_date = datetime.combine(search_date, datetime.min.time())
 
     # 원하는 칼럼을 가진 빈 데이터프레임 생성
-    df_fundlist_all = pd.DataFrame(columns=['펀드코드', '펀드명', '차수', '편입일',  '쿠폰'])
+    df_fundlist_all = pd.DataFrame(columns=['펀드코드', '펀드명', '차수', '편입일',  '쿠폰', '보험사코드'])
     df_fundlist_all.index.name = 'ID'
 
     # 만약 평가일에 해당하는 ELS 편입건 있으면 해당 ELS 편입한 펀드 찾아서 데이터프레임에 저장
@@ -53,6 +53,7 @@ def main():
                 df_fundlist['차수'] = df1.columns[28+j]
                 df_fundlist['편입일'] = df1.iloc[i, 2]
                 df_fundlist['쿠폰'] = df1.iloc[i, 15]
+                df_fundlist['보험사코드'] = df2.iloc[:, 6][df2.iloc[:, 2] == df1.index[i]]
                 df_fundlist_all = pd.concat([df_fundlist_all, df_fundlist])
 
     # 해당 기간에 펀드 없을경우 '정보 없음' 출력하고 종료
@@ -66,7 +67,7 @@ def main():
     df_fundlist_all.drop_duplicates(keep='first', inplace=True)
     df_fundlist_all["ID"] = df_fundlist_all.index
     df_fundlist_all = df_fundlist_all.sort_values(by=['펀드명'])
-    df_fundlist_all = df_fundlist_all[['펀드코드', '펀드명', '차수', '편입일', '쿠폰']]
+    df_fundlist_all = df_fundlist_all[['펀드코드', '펀드명', '차수', '편입일', '쿠폰', '보험사코드']]
 
     file_schedule.sheets['펀드정보_xlwings'][0, 0].options(index=False).value = df_fundlist_all
 
@@ -95,36 +96,47 @@ def main():
 
         df_result = pd.concat([df_result, match_els])
 
-    df_result.rename(columns={'주수/계약수/액면': '계약금액'}, inplace=True)
-    df_result['MP베리어금액'] = df_result['계약금액'] * df_result['쿠폰'] / 12
+    df_result.rename(columns={'주수/계약수/액면': '액면금액'}, inplace=True)
+    df_result['쿠폰금액'] = df_result['액면금액'] * df_result['쿠폰'] / 12
     df_result['평가구분'] = "MP"
     df_result.drop(['쿠폰', '발행일'], axis=1, inplace=True)
 
-    df_result = df_result[['펀드코드', '펀드명', '종목코드', '종목명', '평가구분', '회차', '계약금액', 'MP베리어금액']]
+    df_result = df_result[['펀드코드', '펀드명', '종목코드', '종목명', '평가구분', '회차', '액면금액', '쿠폰금액']]
 
     # 달러형 아니면 회차가 6배수면 MP 추가, 달러형이면 회차가 6의 배수면 중도상환으로 변경
-    df_add = pd.DataFrame(columns=['펀드코드', '펀드명', '종목코드', '종목명', '평가구분', '회차', '계약금액', 'MP베리어금액'])
+    df_add = pd.DataFrame(columns=['펀드코드', '펀드명', '종목코드', '종목명', '평가구분', '회차', '액면금액', '쿠폰금액'])
 
     for i in range(len(df_result)):
         if int(df_result.iloc[i, 5]) % 6 == 0:   # 6의 배수면
             k = len(df_add)
+            df_result.iloc[i, 4] = '조기상환'
             df_add.loc[k+1] = pd.Series(df_result.iloc[i, :])
 
     # df_add가 비어있지 않으면, 즉 6의 배수가 있으면
     if not df_add.empty:
-        # 6의 배수인 종목 따로 모아서 중도상환으로 바꿔줌
-        df_add['평가구분'] = '중도상환'
+        # 6의 배수인 종목 따로 모아서 MP로 바꿔줌
+        df_add['평가구분'] = 'MP'
 
         # 기존에 달러형 & 6의 배수인 것들은 MP로 나와있으니 제거
-        df_result = df_result[~((df_result['펀드명'].str.contains("달러")) & (df_result['회차'].astype(int) % 6 == 0))]
+        df_add = df_add[~df_add['펀드명'].str.contains("달러")]
+
+        # 기존에 30년보증형 & 6의 배수인 것들은 MP로 나와있으니 제거
+        # 이름에 보증형 있고 뒤에 숫자가 2205이상인 것만 체크
+        df_add['number'] = df_add['펀드명'].str.extract(r'(\d+)').astype(int)
+        cond = df_add['펀드명'].str.contains("보증") & (df_add['number'] >= 2205)
+        df_add = df_add[~cond]
+
+        df_add.drop(['number'], axis='columns', inplace=True)
+
         df_result = pd.concat([df_result, df_add])
 
     # 달러형은 MP 배리어 금액에 회차만큼 곱해줘야하고 회차를 6으로 나눠줘야함 --> MP가 아니니까 남들 6차가 1차
     df_result["회차"] = df_result["회차"].astype(float)
-    df_result['MP베리어금액'] = df_result['MP베리어금액'].astype(float)
+    df_result['쿠폰금액'] = df_result['쿠폰금액'].astype(float)
 
+    # 달러형이거나 보증형2205 이후 것들은 쿠폰금액 * 차수한 뒤 차수 6으로 나눔
     for i in range(len(df_result)):
-        if df_result.iloc[i, 1][:2] == "달러":
+        if df_result.iloc[i, 1][:2] == "달러" or (df_result.iloc[i, 1][5:7] == "보증" and int(df_result.iloc[i, 1][-4:]) >= 2205):
             df_result.iloc[i, 7] = f'{df_result.iloc[i, 7] * df_result.iloc[i, 5]:.2f}'
             df_result.iloc[i, 5] = df_result.iloc[i, 5] // 6
 
