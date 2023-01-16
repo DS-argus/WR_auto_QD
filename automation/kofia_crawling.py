@@ -1,4 +1,5 @@
 import pandas as pd
+import xlwings as xw
 
 from automation.SSLpatch import no_ssl_verification
 from automation.kofia_codes import code
@@ -177,13 +178,13 @@ def FS_crawler(last_quarter):
     options.add_argument('headless')
     options.add_argument('window-size=1920x1080')
     options.add_argument("disable-gpu")
-
     # escaping SSL error
     with no_ssl_verification():
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()),
                                   options=options)
 
         url = url_main + url_date + url_comps + url_items
+        print(url)
         driver.get(url)
 
         driver.maximize_window()
@@ -198,21 +199,21 @@ def FS_crawler(last_quarter):
         for i in range(15):     # 스크롤 다운 횟수(넉넉하게, 아래에서 조건만족하면 끝낼 것)
             for j in range(5):
                 comp = element[j].find_elements(by=By.CSS_SELECTOR,
-                                         value="td")[0].find_element(by=By.CSS_SELECTOR,
-                                         value="nobr")
+                                                value="td")[0].find_element(by=By.CSS_SELECTOR,
+                                                                            value="nobr")
 
                 # 이미 크롤링한 회사면 다음줄로 넘어감
                 if comp.text in comp_list:
                     continue
-    
+
                 liabilities = element[j].find_elements(by=By.CSS_SELECTOR,
-                                         value="td")[1].find_element(by=By.CSS_SELECTOR,
-                                         value="nobr")
-    
+                                                       value="td")[1].find_element(by=By.CSS_SELECTOR,
+                                                                                   value="nobr")
+
                 equities = element[j].find_elements(by=By.CSS_SELECTOR,
-                                         value="td")[2].find_element(by=By.CSS_SELECTOR,
-                                         value="nobr")
-    
+                                                    value="td")[2].find_element(by=By.CSS_SELECTOR,
+                                                                                value="nobr")
+
                 comp_list.append(comp.text)
                 lia_list.append(liabilities.text)
                 equity_list.append(equities.text)
@@ -235,9 +236,14 @@ def FS_crawler(last_quarter):
 
 
 if __name__ == "__main__":
+    FS = FS_crawler(date(2022, 6, 30))
+    print(FS)
+    xw.view(FS)
 
-    print(FS_crawler(date(2022, 3, 31)))
-
-    print(NCR_crawler())
-
-    print(SEIBRO_crawler())
+    # NCR = NCR_crawler()
+    # print(NCR)
+    # xw.view(NCR)
+    #
+    # SEIBRO = SEIBRO_crawler()
+    # print(SEIBRO)
+    # xw.view(SEIBRO)

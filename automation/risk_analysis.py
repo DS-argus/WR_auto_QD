@@ -112,7 +112,12 @@ def mdd(df_data, index_name):
     return df_result
 
 
-if __name__ == "__main__":
+def print_to_excel():
+
+    wb = xw.Book.caller()
+    ws = wb.sheets['main']
+    ws1 = wb.sheets['idxinfo']
+    ws2 = wb.sheets['chart']
 
     index = ['KOSPI200', 'HSCEI', 'NIKKEI225', 'S&P500', 'EUROSTOXX50', 'CSI300']
 
@@ -126,6 +131,27 @@ if __name__ == "__main__":
 
     fig = price_plot(df_price)
 
-    new_excel = xw.Book()
-    new_excel.sheets["Sheet1"].range("A5").value = df_total
-    new_excel.sheets["Sheet1"].pictures.add(fig, name='Historical', update=True)
+    ws1.range("A1").value = date.today()
+    ws1.range("A5").value = df_total
+    ws2.pictures.add(fig, name='Historical', update=True)
+
+
+if __name__ == "__main__":
+    xw.Book(r"\\172.31.1.222\Deriva\자동화\자동화폴더\구조화증권위험분석\구조화증권위험분석.xlsm").set_mock_caller()
+    print_to_excel()
+
+    # index = ['KOSPI200', 'HSCEI', 'NIKKEI225', 'S&P500', 'EUROSTOXX50', 'CSI300']
+    #
+    # df_price = get_price_from_sql(date(2000, 1, 1), date.today(), index, type='w')
+    #
+    # df_CAGR = cagr(df_price, index)
+    # df_Vol = vol(df_price, index)
+    # df_MDD = mdd(df_price, index)
+    #
+    # df_total = df_CAGR.join(df_Vol.join(df_MDD))
+    #
+    # fig = price_plot(df_price)
+    #
+    # new_excel = xw.Book()
+    # new_excel.sheets["Sheet1"].range("A5").value = df_total
+    # new_excel.sheets["Sheet1"].pictures.add(fig, name='Historical', update=True)
